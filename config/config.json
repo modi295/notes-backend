@@ -1,0 +1,23 @@
+{
+  "development": {
+    "username": "postgres",
+    "password": "Online",
+    "database": "NotesApplication",
+    "host": "localhost",
+    "dialect": "postgres"
+  },
+  "test": {
+    "username": "postgres",
+    "password": "Online",
+    "database": "NotesApplication",
+    "host": "localhost",
+    "dialect": "postgres"
+  },
+  "production": {
+    "username": "postgres",
+    "password": "Online",
+    "database": "NotesApplication",
+    "host": "localhost",
+    "dialect": "postgres"
+  }
+}
