@@ -4,8 +4,6 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage })
 
-
-
 // const imageFilter = (file, cb) => {
 //     if (file.mimetype.startsWith('image/png')) {
 //         cb(null, true);
@@ -120,7 +118,164 @@ async function uploadNotes(req, res) {
     }
 }
 
+async function getAllNotes(req, res) {
+    try {
+      const allNotes = await Notes.findAll();
+      if (!allNotes || allNotes.length === 0) {
+        return res.status(404).json({ message: 'No notes found' });
+      }
+  
+      res.status(200).json(allNotes);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+async function getNotes(req, res) {
+  const email = req.params.email;
+  try {
+    const userNotes = await Notes.findAll({ where: { email } }); // Find notes by user's email
+    if (!userNotes || userNotes.length === 0) {
+      return res.status(404).json({ message: 'No notes found for this user' });
+    }
 
-module.exports = { uploadNotes, uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload };
+    res.status(200).json(userNotes);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+async function getNotesById(req, res) {
+    const noteId = req.params.id; // Assuming the ID is passed in the request parameter 'id'
+  
+    try {
+      const note = await Notes.findByPk(noteId); // Find note by its ID (primary key)
+  
+      if (!note) {
+        return res.status(404).json({ message: 'Note not found' });
+      }
+  
+      res.status(200).json(note);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+async function getPublishNotes(req, res) {
+    const email = req.params.email;
+    try {
+      const userPublishedNotes = await Notes.findAll({ 
+        where: { 
+          email,
+          statusFlag: 'P' 
+        } 
+      });
+      
+      if (!userPublishedNotes || userPublishedNotes.length === 0) {
+        return res.status(404).json({ message: 'No published notes found for this user' });
+      }
+  
+      res.status(200).json(userPublishedNotes);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+  async function getSaveNotes(req, res) {
+    const email = req.params.email;
+    try {
+      const userPublishedNotes = await Notes.findAll({ 
+        where: { 
+          email,
+          statusFlag: 'S' 
+        } 
+      });
+      
+      if (!userPublishedNotes || userPublishedNotes.length === 0) {
+        return res.status(404).json({ message: 'No published notes found for this user' });
+      }
+  
+      res.status(200).json(userPublishedNotes);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async function deleteNoteById(req, res) {
+    const id = req.params.id;
+    try {
+      const note = await Notes.findByPk(id); 
+      if (!note) {
+        return res.status(404).json({ message: 'Note not found' });
+      }
+  
+      await note.destroy(); 
+      res.status(200).json({ message: 'Note deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async function updateNotes(req, res) {
+    try {
+        const noteId = req.params.id;
+        const {
+            email,
+            noteTitle,
+            category,
+            notesType,
+            numberOfPages,
+            notesDescription,
+            universityInformation,
+            country,
+            courseInformation,
+            courseCode,
+            professorLecturer,
+            sellFor,
+            sellPrice,
+            statusFlag,
+            publishFlag,
+            displayPicture,
+            notesAttachment,
+            previewUpload
+        } = req.body;
+
+        // Check if the note exists
+        const existingNote = await Notes.findOne({ where: { id: noteId } });
+        if (!existingNote) {
+            return res.status(404).json({ success: false, error: "Note not found"});
+        }
+
+        // Update the note fields
+        existingNote.email = email;
+        existingNote.noteTitle = noteTitle;
+        existingNote.category = category;
+        existingNote.notesType = notesType;
+        existingNote.numberOfPages = numberOfPages;
+        existingNote.notesDescription = notesDescription;
+        existingNote.universityInformation = universityInformation;
+        existingNote.country = country;
+        existingNote.courseInformation = courseInformation;
+        existingNote.courseCode = courseCode;
+        existingNote.professorLecturer = professorLecturer;
+        existingNote.sellFor = sellFor;
+        existingNote.sellPrice = sellPrice;
+        existingNote.statusFlag = statusFlag;
+        existingNote.publishFlag = publishFlag;
+        existingNote.displayPicture = displayPicture || existingNote.displayPicture;
+        existingNote.notesAttachment = notesAttachment || existingNote.notesAttachment;
+        existingNote.previewUpload = previewUpload || existingNote.previewUpload;
+
+        // Save the updated note
+        const updatedNote = await existingNote.save();
+
+        // Send a success response with the updated note
+        res.status(200).json({ success: true, data: updatedNote });
+    } catch (error) {
+        // Send an error response if something goes wrong
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+  
+
+
+module.exports = { uploadNotes, uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload,getNotes, getPublishNotes,getSaveNotes,getAllNotes, getNotesById, deleteNoteById ,updateNotes};
 
 

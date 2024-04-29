@@ -8,8 +8,7 @@ const Notes = sequelize.define('Notes', {
     },
     noteTitle: {
         type: DataTypes.STRING(100),
-        allowNull: false,
-        unique: true
+        allowNull: false
     },
     category: {
         type: DataTypes.STRING(100),
