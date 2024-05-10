@@ -94,8 +94,11 @@ async function getUser(req, res) {
       country: user.country,
       university: user.university,
       college: user.college,
-      profilePicture: user.profilePicture
+      profilePicture:user.profilePicture
     };
+    // if (user.profilePicture) {
+    //   sanitizedAllUser.profilePicture = Buffer.from(user.profilePicture).toString('base64');
+    // }
     res.status(200).json(sanitizedAllUser);
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -66,7 +66,19 @@ const Notes = sequelize.define('Notes', {
     },
     publishFlag: {
         type: DataTypes.STRING(3),
-    }
+    },
+    displayPictureP: {
+        type: DataTypes.STRING(350), 
+        allowNull: true
+    },
+    notesAttachmentP: {
+        type: DataTypes.STRING(350), 
+        allowNull: true
+    },
+    previewUploadP: {
+        type: DataTypes.STRING(350), 
+        allowNull: true
+    },
 }, {
     timestamps: true,
 });

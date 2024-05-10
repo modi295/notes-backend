@@ -1,4 +1,3 @@
-
 const Notes = require('../models/Notes');
 const multer = require('multer');
 const storage = multer.memoryStorage();
@@ -158,6 +157,59 @@ async function getNotesById(req, res) {
       res.status(500).json({ error: error.message });
     }
   }
+
+// async function getNotesById(req, res) {
+//   const noteId = req.params.id; // Assuming the ID is passed in the request parameter 'id'
+
+//   try {
+//     const note = await Notes.findByPk(noteId); // Find note by its ID (primary key)
+
+//     if (!note) {
+//       return res.status(404).json({ message: 'Note not found' });
+//     }
+
+//     const sanitizedNote = {
+//       noteTitle: note.noteTitle,
+//       category: note.category,
+//       notesType: note.notesType,
+//       numberOfPages: note.numberOfPages,
+//       notesDescription: note.notesDescription,
+//       universityInformation: note.universityInformation,
+//       country: note.country,
+//       courseInformation: note.courseInformation,
+//       courseCode: note.courseCode,
+//       professorLecturer: note.professorLecturer,
+//       sellFor: note.sellFor,
+//       sellPrice: note.sellPrice,
+//       statusFlag: note.statusFlag,
+//       publishFlag: note.publishFlag
+//     };
+
+//     // Handling image fields
+//     if (note.displayPicture) {
+//       sanitizedNote.displayPicture = Buffer.from(note.displayPicture).toString('base64');
+//     }
+//     if (note.previewUpload) {
+//       // Assuming previewUpload stores PDF data
+//       sanitizedNote.previewUpload = {
+//         data: Buffer.from(note.previewUpload).toString('base64'),
+//         contentType: 'application/pdf' // Adjust accordingly if it's a different content type
+//       };
+//     }
+//     if (note.notesAttachment) {
+//       // Assuming notesAttachment stores PDF data
+//       sanitizedNote.notesAttachment = {
+//         data: Buffer.from(note.notesAttachment).toString('base64'),
+//         contentType: 'application/pdf' // Adjust accordingly if it's a different content type
+//       };
+//     }
+
+//     res.status(200).json(sanitizedNote);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// }
+
 async function getPublishNotes(req, res) {
     const email = req.params.email;
     try {
