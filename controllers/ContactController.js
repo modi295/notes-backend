@@ -7,9 +7,12 @@ async function contact(req, res) {
       const user = await Contact.create({ fullName, email, subject, comment });
       const transporter = nodemailer.createTransport({
         service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
         auth: {
-          user: 'chamanmodi911@gmail.com',
-          pass: 'bggw xgwy vhor irob'
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
         }
       });
     

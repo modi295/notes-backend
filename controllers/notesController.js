@@ -1,7 +1,10 @@
+const Sequelize = require('sequelize');  // Add this line
 const Notes = require('../models/Notes');
 const multer = require('multer');
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage })
+const upload = multer({ storage: storage });
+
+
 
 // const imageFilter = (file, cb) => {
 //     if (file.mimetype.startsWith('image/png')) {
@@ -229,6 +232,46 @@ async function getPublishNotes(req, res) {
       res.status(500).json({ error: error.message });
     }
   }
+
+  async function getAllPublishedNotes(req, res) {
+    try {
+      // Fetch all published notes with download count
+      const allPublishedNotes = await Notes.findAll({
+        where: {  },
+        attributes: {
+          include: [
+            [
+              // Subquery to count downloads for each noteId
+              Sequelize.literal(`(
+                SELECT COUNT(*) 
+                FROM "DownloadNotes" AS dn 
+                WHERE dn."noteId" = "Notes".id
+              )`),
+              'downloadCount'
+            ],
+            [
+              Sequelize.literal(`(
+                SELECT CONCAT(u."firstName", ' ', u."lastName")
+                FROM "Users" AS u
+                WHERE u.email = "Notes".email
+                LIMIT 1
+              )`),
+              'userFullName'
+            ]
+          ]
+        }
+      });
+  
+      if (!allPublishedNotes || allPublishedNotes.length === 0) {
+        return res.status(404).json({ message: 'No published notes found' });
+      }
+  
+      res.status(200).json(allPublishedNotes);
+    } catch (error) {
+      console.error('Error fetching published notes:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
   async function getSaveNotes(req, res) {
     const email = req.params.email;
     try {
@@ -328,6 +371,6 @@ async function getPublishNotes(req, res) {
   
 
 
-module.exports = { uploadNotes, uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload,getNotes, getPublishNotes,getSaveNotes,getAllNotes, getNotesById, deleteNoteById ,updateNotes};
+module.exports = { getAllPublishedNotes,uploadNotes, uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload,getNotes, getPublishNotes,getSaveNotes,getAllNotes, getNotesById, deleteNoteById ,updateNotes,};
 
 

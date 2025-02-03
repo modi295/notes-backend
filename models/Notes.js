@@ -1,10 +1,15 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../db');
+const User = require('./User'); 
 
 const Notes = sequelize.define('Notes', {
     email: {
         type: DataTypes.STRING(100),
-        allowNull: false
+        allowNull: false,
+        references: {
+            model: User,
+            key: 'email'
+        }
     },
     noteTitle: {
         type: DataTypes.STRING(100),
@@ -82,5 +87,8 @@ const Notes = sequelize.define('Notes', {
 }, {
     timestamps: true,
 });
+
+User.hasMany(Notes, { foreignKey: 'email' });
+Notes.belongsTo(User, { foreignKey: 'email' });
 
 module.exports = Notes;
