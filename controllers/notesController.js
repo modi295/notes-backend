@@ -5,27 +5,6 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 
-
-// const imageFilter = (file, cb) => {
-//     if (file.mimetype.startsWith('image/png')) {
-//         cb(null, true);
-//     } else {
-//         cb(new Error('Only images are allowed'));
-//     }
-// };
-
-// const pdfFilter = (file, cb) => {
-//     if (file.mimetype === 'application/pdf') {
-//         cb(null, true);
-//     } else {
-//         cb(new Error('Only PDF files are allowed'));
-//     }
-// };
-
-// const uploadImage = multer({ storage, fileFilter: imageFilter });
-
-// const uploadPDF = multer({ storage, fileFilter: pdfFilter });
-
 async function uploadDisplayPicture(req, res, next) {
     upload.single('displayPicture')(req, res, err => {
         if (err instanceof multer.MulterError) {

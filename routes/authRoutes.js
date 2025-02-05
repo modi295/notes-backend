@@ -3,7 +3,7 @@ const express = require('express');
 const { register, login, forgotPassword, getUser,updateUser, uploadProfilePicture,changePassword} = require('../controllers/authController');
 const { contact } = require('../controllers/ContactController');
 const { uploadNotes, uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload,getAllPublishedNotes ,getNotes, getPublishNotes,getSaveNotes,getNotesById,getAllNotes,deleteNoteById,updateNotes} = require('../controllers/notesController');
-const { getDownloadNotes,  postDownloadNote, getSoldNotes, postSoldNote, getBuyerNotes, postBuyerNote,updateBuyerNote } = require('../controllers/downloadController');
+const { getDownloadNotes,  postDownloadNote, getSoldNotes, postSoldNote, getBuyerNotes, postBuyerNote,updateBuyerNote,getDownloadNotesById } = require('../controllers/downloadController');
 
 
 const router = express.Router();
@@ -32,6 +32,9 @@ router.delete('/deleteNote/:id', deleteNoteById);
 
 router.get('/downloadnotes/:email', getDownloadNotes);
 router.post('/downloadnotes', postDownloadNote);
+router.get('/downloadnotesbyId/:id', getDownloadNotesById);
+
+
 
 // Define routes for SoldNotes
 router.get('/soldnotes/:email', getSoldNotes);
