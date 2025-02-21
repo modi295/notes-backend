@@ -1,4 +1,4 @@
-const Sequelize = require('sequelize');  // Add this line
+const { Op, Sequelize } = require('sequelize');  // Add this line
 const Notes = require('../models/Notes');
 const multer = require('multer');
 const storage = multer.memoryStorage();
@@ -192,7 +192,7 @@ async function getNotesById(req, res) {
 //   }
 // }
 
-async function getPublishNotes(req, res) {
+async function getPublishNotesByEmail(req, res) {
     const email = req.params.email;
     try {
       const userPublishedNotes = await Notes.findAll({ 
@@ -216,7 +216,7 @@ async function getPublishNotes(req, res) {
     try {
       // Fetch all published notes with download count
       const allPublishedNotes = await Notes.findAll({
-        where: {  },
+        where: { publishFlag: 'P' },
         attributes: {
           include: [
             [
@@ -305,9 +305,10 @@ async function getPublishNotes(req, res) {
             sellPrice,
             statusFlag,
             publishFlag,
-            displayPicture,
-            notesAttachment,
-            previewUpload
+            displayPictureP,
+            notesAttachmentP,
+            previewUploadP,
+            remark
         } = req.body;
 
         // Check if the note exists
@@ -332,9 +333,10 @@ async function getPublishNotes(req, res) {
         existingNote.sellPrice = sellPrice;
         existingNote.statusFlag = statusFlag;
         existingNote.publishFlag = publishFlag;
-        existingNote.displayPicture = displayPicture || existingNote.displayPicture;
-        existingNote.notesAttachment = notesAttachment || existingNote.notesAttachment;
-        existingNote.previewUpload = previewUpload || existingNote.previewUpload;
+        existingNote.remark = remark;
+        existingNote.displayPictureP = displayPictureP || existingNote.displayPictureP;
+        existingNote.notesAttachmentP = notesAttachmentP || existingNote.notesAttachmentP;
+        existingNote.previewUploadP = previewUploadP || existingNote.previewUploadP;
 
         // Save the updated note
         const updatedNote = await existingNote.save();
@@ -348,8 +350,75 @@ async function getPublishNotes(req, res) {
     }
 }
   
+async function getUnderReviewNotes(req, res) {
+  try {
+    const allPublishedNotes = await Notes.findAll({
+      where: { statusFlag: 'P',publishFlag: { [Op.notIn]: ['R', 'P'] }},
+      attributes: {
+        include: [
+          [
+            Sequelize.literal(`(
+              SELECT CONCAT(u."firstName", ' ', u."lastName")
+              FROM "Users" AS u
+              WHERE u.email = "Notes".email
+              LIMIT 1
+            )`),
+            'userFullName'
+          ]
+        ]
+      }
+    });
 
+    if (!allPublishedNotes || allPublishedNotes.length === 0) {
+      return res.status(404).json({ message: 'No published notes found' });
+    }
 
-module.exports = { getAllPublishedNotes,uploadNotes, uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload,getNotes, getPublishNotes,getSaveNotes,getAllNotes, getNotesById, deleteNoteById ,updateNotes,};
+    res.status(200).json(allPublishedNotes);
+  } catch (error) {
+    console.error('Error fetching published notes:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+async function getAllRejectedNotes(req, res) {
+  try {
+    // Fetch all published notes with download count
+    const allPublishedNotes = await Notes.findAll({
+      where: { publishFlag: 'R'},
+      attributes: {
+        include: [
+          [
+            // Subquery to count downloads for each noteId
+            Sequelize.literal(`(
+              SELECT COUNT(*) 
+              FROM "DownloadNotes" AS dn 
+              WHERE dn."noteId" = "Notes".id
+            )`),
+            'downloadCount'
+          ],
+          [
+            Sequelize.literal(`(
+              SELECT CONCAT(u."firstName", ' ', u."lastName")
+              FROM "Users" AS u
+              WHERE u.email = "Notes".email
+              LIMIT 1
+            )`),
+            'userFullName'
+          ]
+        ]
+      }
+    });
+
+    if (!allPublishedNotes || allPublishedNotes.length === 0) {
+      return res.status(404).json({ message: 'No published notes found' });
+    }
+
+    res.status(200).json(allPublishedNotes);
+  } catch (error) {
+    console.error('Error fetching published notes:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+module.exports = { getAllPublishedNotes,uploadNotes, uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload,getNotes, getPublishNotesByEmail,getSaveNotes,getAllNotes, getNotesById, deleteNoteById ,updateNotes,getUnderReviewNotes,getAllRejectedNotes};
 
 

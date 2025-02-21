@@ -210,6 +210,46 @@ async function getDownloadNotesById(req, res) {
       res.status(500).json({ error: error.message });
     }
   }
+  async function getAllDownloadNotesById(req, res) {
+  
+    try {
+        const note = await DownloadNotes.findAll({ 
+            where: { },
+            attributes: {
+                include: [
+                    // Subquery for Buyer Full Name
+                    [
+                        Sequelize.literal(`(
+                            SELECT CONCAT(u."firstName", ' ', u."lastName")
+                            FROM "Users" AS u
+                            WHERE u."email" = "DownloadNotes"."buyerEmail"
+                            LIMIT 1
+                        )`),
+                        'buyerName'
+                    ],
+                    // Subquery for Purchaser Full Name
+                    [
+                        Sequelize.literal(`(
+                            SELECT CONCAT(u."firstName", ' ', u."lastName")
+                            FROM "Users" AS u
+                            WHERE u."email" = "DownloadNotes"."purchaseEmail"
+                            LIMIT 1
+                        )`),
+                        'purchaserName'
+                    ]
+                ]
+            }
+        });
+  
+      if (!note) {
+        return res.status(404).json({ message: 'Note not found' });
+      }
+  
+      res.status(200).json(note);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 
 
-module.exports = { getDownloadNotes,  postDownloadNote, getSoldNotes, postSoldNote, getBuyerNotes, postBuyerNote,updateBuyerNote,getDownloadNotesById };
+module.exports = { getDownloadNotes,  postDownloadNote, getSoldNotes, postSoldNote, getBuyerNotes, postBuyerNote,updateBuyerNote,getDownloadNotesById,getAllDownloadNotesById };

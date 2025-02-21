@@ -2,8 +2,8 @@
 const express = require('express');
 const { register, login, forgotPassword, getUser,updateUser, uploadProfilePicture,changePassword} = require('../controllers/authController');
 const { contact } = require('../controllers/ContactController');
-const { uploadNotes, uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload,getAllPublishedNotes ,getNotes, getPublishNotes,getSaveNotes,getNotesById,getAllNotes,deleteNoteById,updateNotes} = require('../controllers/notesController');
-const { getDownloadNotes,  postDownloadNote, getSoldNotes, postSoldNote, getBuyerNotes, postBuyerNote,updateBuyerNote,getDownloadNotesById } = require('../controllers/downloadController');
+const { uploadNotes, uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload,getAllPublishedNotes ,getNotes, getPublishNotesByEmail,getSaveNotes,getNotesById,getAllNotes,deleteNoteById,updateNotes,getUnderReviewNotes,getAllRejectedNotes} = require('../controllers/notesController');
+const { getDownloadNotes,  postDownloadNote, getSoldNotes, postSoldNote, getBuyerNotes, postBuyerNote,updateBuyerNote,getDownloadNotesById,getAllDownloadNotesById } = require('../controllers/downloadController');
 
 
 const router = express.Router();
@@ -22,17 +22,23 @@ router.post('/contact', contact);
 //router.post('/uploadNotes', uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload, uploadNotes);
 router.get('/notes/:email',getNotes );
 router.get('/notesById/:id',getNotesById );
-router.get('/publishNotes/:email',getPublishNotes );
+router.get('/publishNotes/:email',getPublishNotesByEmail );
 router.get('/allpublishNotes',getAllPublishedNotes );
 router.get('/saveNotes/:email', getSaveNotes);
 router.get('/allNotes', getAllNotes);
 router.delete('/deleteNote/:id', deleteNoteById);
-//router.put('/updateNotes/:id', uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload, updateNotes);
+router.get('/underReviewNotes',getUnderReviewNotes );
+router.get('/rejectedNotes',getAllRejectedNotes );
+//router.put('/updateNotes/:id',updateNotes );
+
+
+router.put('/updateNotes/:id', uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload, updateNotes);
 
 
 router.get('/downloadnotes/:email', getDownloadNotes);
 router.post('/downloadnotes', postDownloadNote);
 router.get('/downloadnotesbyId/:id', getDownloadNotesById);
+router.get('/downloadnotes', getAllDownloadNotesById);
 
 
 
