@@ -24,9 +24,12 @@ const app = express();
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(cors());
 app.use(express.json());
+require("dotenv").config();
 
 app.use('/api', authRoutes,check);
 app.use('/uploads', express.static('uploads'));
+app.use('/updateNotes/:id', express.static('uploads'));
+
 
 
 const PORT = process.env.PORT || 5000;

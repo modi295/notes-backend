@@ -1,12 +1,12 @@
-// controllers/authController.js
+const { Op, Sequelize } = require('sequelize');  // Add this line
 const bcrypt = require('bcrypt');
-//const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage })
+const transporter = require("../Utility/emailService"); 
 
 async function uploadProfilePicture(req, res, next) {
   upload.single('profilePicture')(req, res, err => {
@@ -49,6 +49,9 @@ async function updateUser(req, res) {
       country: updatedUser.country,
       university: updatedUser.university,
       college: updatedUser.college,
+      active: updatedUser.active,
+      remark: updatedUser.remark
+
     };
     res.status(200).json({ message: 'User updated successfully', user: sanitizedUser });
   } catch (error) {
@@ -56,18 +59,69 @@ async function updateUser(req, res) {
   }
 }
 
+// async function register(req, res) {
+//   const { firstName, lastName, email, password } = req.body;
+//   try {
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     const user = await User.create({ firstName, lastName, email, password: hashedPassword });
+//     res.status(201).json({ userId: user.id });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// }
+
+
+
 async function register(req, res) {
   const { firstName, lastName, email, password } = req.body;
+  
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ firstName, lastName, email, password: hashedPassword });
-    res.status(201).json({ userId: user.id });
+
+    const user = await User.create({ firstName, lastName, email, password: hashedPassword, active: 'N' });
+
+    const token = jwt.sign({ userId: user.id }, "your-secret-key", { expiresIn: "24h" });
+
+    // Send verification email
+    const verificationLink = `http://localhost:3000/verify-email/${token}`;
+    
+    const mailOptions = {
+      from: "chamanmodi911@gmail.com",
+      to: email,
+      subject: "Note Marketplace - Email Verification",
+      html: `<p>Hello ${firstName},</p>
+             <p>Thank you for signing up with us. Please click the link below to verify your email address:</p>
+             <a href="${verificationLink}">Verify Email</a>
+             <p>Regards,<br>Notes Marketplace</p>`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(201).json({ message: "User registered successfully. Please check your email for verification." });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 }
+
+async function verifyEmail(req, res) {
+  const token = req.params.token;
+
+  try {
+    const decoded = jwt.verify(token, "your-secret-key"); // Verify token
+
+    // Find user and update 'active' status
+    await User.update({ active: 'Y' }, { where: { id: decoded.userId } });
+
+    res.status(200).send("Email verified successfully! You can now log in.");
+  } catch (error) {
+    res.status(400).send("Invalid or expired token.");
+  }
+}
+
+
 async function getUser(req, res) {
-  const email = req.params.email; 
+  const email = req.params.email;
   try {
     const user = await User.findOne({ where: { email } }); // Find user by email
     if (!user) {
@@ -94,7 +148,7 @@ async function getUser(req, res) {
       country: user.country,
       university: user.university,
       college: user.college,
-      profilePicture:user.profilePicture
+      profilePicture: user.profilePicture
     };
     // if (user.profilePicture) {
     //   sanitizedAllUser.profilePicture = Buffer.from(user.profilePicture).toString('base64');
@@ -107,7 +161,7 @@ async function getUser(req, res) {
 // async function updateUser(req, res) {
 //   const email = req.params.email;
 //   const updatedUserData = req.body; // Assuming the request body contains updated user data
-  
+
 //   try {
 //     const [updatedRowsCount, updatedUser] = await User.update(updatedUserData, {
 //       where: { email },
@@ -143,24 +197,49 @@ async function getUser(req, res) {
 //   }
 // }
 
+// async function login(req, res) {
+//   const { email, password } = req.body;
+//   try {
+//     const user = await User.findOne({ where: { email } });
+//     if (!user) {
+//       throw new Error('User not found');
+//     }
+//     if (user.active === 'N') {
+//       throw new Error('Your ID has been deactivated. Please contact Admin.');
+//     }
+//     const passwordMatch = await bcrypt.compare(password, user.password);
+//     if (!passwordMatch) {
+//       throw new Error('Invalid password');
+//     }
+//     const token = jwt.sign({ userId: user.id }, 'your_secret_key', { expiresIn: '1h' });
+//     res.json({ token });
+//   } catch (error) {
+//     res.status(401).json({ error: error.message });
+//   }
+// }
+
 async function login(req, res) {
   const { email, password } = req.body;
   try {
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
-      throw new Error('User not found');
-    }
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-      throw new Error('Invalid password');
-    }
-    const token = jwt.sign({ userId: user.id }, 'your_secret_key', { expiresIn: '1h' });
-    res.json({ token });
+      const user = await User.findOne({ where: { email } });
+      if (!user) {
+          return res.status(401).json({ error: 'User not found' });
+      }
+      if (user.active === 'N') {
+          return res.status(401).json({ error: 'Your ID has been deactivated. Please contact Admin.' });
+      }
+      const passwordMatch = await bcrypt.compare(password, user.password);
+      if (!passwordMatch) {
+          return res.status(401).json({ error: 'Invalid password' });
+      }
+
+      const token = jwt.sign({ userId: user.id }, 'your_secret_key', { expiresIn: '1m' });
+
+      res.json({ token,role: user.role });
   } catch (error) {
-    res.status(401).json({ error: error.message });
+      res.status(500).json({ error: error.message });
   }
 }
-
 async function forgotPassword(req, res) {
   const { email } = req.body;
   try {
@@ -169,30 +248,19 @@ async function forgotPassword(req, res) {
       return res.status(404).json({ message: 'User not found' });
     }
     //const randomPassword = crypto.randomBytes(16).toString('hex');
-    const randomPassword = Array(14).fill("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[{]}|;:,<.>?").map(function(x) { return x[Math.floor(Math.random() * x.length)] }).join('').replace(/\s+/g, '');
+    const randomPassword = Array(14).fill("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[{]}|;:,<.>?").map(function (x) { return x[Math.floor(Math.random() * x.length)] }).join('').replace(/\s+/g, '');
 
     const hashedPassword = await bcrypt.hash(randomPassword, 10);
-  
+
     await user.update({ password: hashedPassword });
-  
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // Use TLS
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
-  
+
     await transporter.sendMail({
-      from: 'chamanmodi911@gmail.com',
+      from: process.env.EMAIL_USER,
       to: user.email,
       subject: 'New Temporary Password has been created for you',
       text: `Hello,\nWe have generated a new password for you.\nPassword: ${randomPassword}\nVisit us at: www.tatvasoft.com or E-mail us at: business@tatvasoft.com\nRegards,\nNotes Marketplace`,
     });
-    res.status(201).json({ Message: "Mail Sent"  });
+    res.status(201).json({ Message: "Mail Sent" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -217,5 +285,103 @@ async function changePassword(req, res) {
   }
 }
 
-module.exports = { register, login, forgotPassword, getUser, updateUser, uploadProfilePicture, changePassword };
+// async function getAllUsers(req, res) {
+//   try {
+//     const users = await User.findAll({
+//       attributes: ['firstName', 'lastName', 'email', 'dob', 'gender', 'phoneNumberCode', 'phoneNumber',
+//                    'address1', 'address2', 'city', 'state', 'zipCode', 'country', 'university', 'college', 'profilePicture','createdAt']
+//     });
+
+//     const sanitizedUsers = users.map(user => {
+//       let userData = user.get({ plain: true });
+//       if (userData.profilePicture) {
+//         userData.profilePicture = Buffer.from(userData.profilePicture).toString('base64');
+//       }
+//       return userData;
+//     });
+
+//     res.status(200).json(sanitizedUsers);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// }
+async function getAllUsers(req, res) {
+  try {
+    const users = await User.findAll({
+      attributes: [
+        'firstName', 'lastName', 'email', 'dob', 'gender', 'phoneNumberCode', 'phoneNumber',
+        'address1', 'address2', 'city', 'state', 'zipCode', 'country', 'university', 'college','role','active',
+        'createdAt',
+        [
+          Sequelize.literal(`(
+            SELECT COUNT(*) 
+            FROM "Notes" AS n 
+            WHERE n.email = "User".email 
+            AND n."statusFlag" = 'P' 
+            AND n."publishFlag" NOT IN ('R', 'P')
+        )`),
+          'underReview'
+        ],
+        [
+          Sequelize.literal(`(
+            SELECT COUNT(*) 
+            FROM "Notes" AS n 
+            WHERE n.email = "User".email AND n."publishFlag" = 'P'
+          )`),
+          'publishNote'
+        ],
+        [
+          Sequelize.literal(`(
+            SELECT COALESCE(SUM(dn."sellPrice"), 0)
+            FROM "DownloadNotes" AS dn 
+            JOIN "Notes" AS n ON dn."noteId" = n."id"
+            WHERE n.email = "User".email
+          )`),
+          'totalSellPrice'
+        ],
+        [
+          Sequelize.literal(`(
+            SELECT COUNT(*) 
+            FROM "DownloadNotes" AS dn
+            WHERE dn."noteId" IN (
+              SELECT n.id FROM "Notes" AS n WHERE n.email = "User".email
+            )
+          )`),
+          'downloadCount'
+        ],
+      ]
+    });
+
+    // Convert profilePicture separately
+    const sanitizedUsers = users.map(user => {
+      let userData = user.get({ plain: true });
+
+      // Convert profilePicture to base64
+      if (user.profilePicture) {
+        userData.profilePicture = Buffer.from(user.profilePicture).toString('base64');
+      }
+
+      return userData;
+    });
+
+    res.status(200).json(sanitizedUsers);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+async function Admin(req, res) {
+  const { firstName, lastName, email, phoneNumberCode, phoneNumber } = req.body;
+  try {
+    const password = email.split('@')[0]; 
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({ firstName, lastName, email, phoneNumberCode ,phoneNumber, password: hashedPassword, role:'Admin'});
+    res.status(201).json({ userId: user.id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+module.exports = { register, login, forgotPassword, getUser, updateUser, uploadProfilePicture, changePassword, getAllUsers,Admin,verifyEmail };
 

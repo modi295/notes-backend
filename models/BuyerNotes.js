@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../db');
-const User = require('./User'); 
+const User = require('./User');
 const Notes = require('./Notes');
 
 
@@ -46,9 +46,9 @@ const BuyerNotes = sequelize.define('BuyerNotes', {
         allowNull: false,
         defaultValue: 0,
     },
-    approveFlag: {  
+    approveFlag: {
         type: DataTypes.STRING(1),
-        allowNull: true, 
+        allowNull: true,
     }
 }, {
     timestamps: true,
@@ -59,4 +59,4 @@ BuyerNotes.belongsTo(User, { foreignKey: 'email' });
 Notes.hasMany(BuyerNotes, { foreignKey: 'noteId' });
 BuyerNotes.belongsTo(Notes, { foreignKey: 'noteId' });
 
-module.exports =  BuyerNotes;
+module.exports = BuyerNotes;

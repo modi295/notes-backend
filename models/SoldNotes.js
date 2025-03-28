@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../db');
-const User = require('./User'); 
+const User = require('./User');
 const Notes = require('./Notes');
 
 
@@ -55,4 +55,4 @@ SoldNotes.belongsTo(User, { foreignKey: 'email' });
 Notes.hasMany(SoldNotes, { foreignKey: 'noteId' });
 SoldNotes.belongsTo(Notes, { foreignKey: 'noteId' });
 
-module.exports =  SoldNotes;
+module.exports = SoldNotes;

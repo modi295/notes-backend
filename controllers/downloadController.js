@@ -1,8 +1,8 @@
 const DownloadNotes = require('../models/DownloadNotes');
 const SoldNotes = require('../models/SoldNotes');
 const BuyerNotes = require('../models/BuyerNotes');
-const Sequelize = require('sequelize');  // Add this line
-
+const Sequelize = require('sequelize'); 
+const transporter = require("../Utility/emailService"); 
 
 async function getDownloadNotes(req, res) {
     const buyerEmail = req.params.email;
@@ -43,7 +43,7 @@ async function getBuyerNotes(req, res) {
 
 async function postDownloadNote(req, res) {
     try {
-        const {email,noteId,noteTitle,category,sellFor,sellPrice,PurchaseTypeFlag,purchaseEmail,buyerEmail} = req.body; 
+        const { email, noteId, noteTitle, category, sellFor, sellPrice, PurchaseTypeFlag, purchaseEmail, buyerEmail } = req.body;
         const newNote = await DownloadNotes.create({
             email,
             noteId,
@@ -65,7 +65,7 @@ async function postDownloadNote(req, res) {
 
 async function postSoldNote(req, res) {
     try {
-        const {email,noteId,noteTitle,category,sellFor,sellPrice,purchaseEmail,buyerEmail} = req.body; 
+        const { email, noteId, noteTitle, category, sellFor, sellPrice, purchaseEmail, buyerEmail } = req.body;
         const newNote = await SoldNotes.create({
             email,
             noteId,
@@ -86,7 +86,7 @@ async function postSoldNote(req, res) {
 
 async function postBuyerNote(req, res) {
     try {
-        const {email,noteId,noteTitle,category,sellFor,sellPrice,purchaseEmail,buyerEmail,approveFlag} = req.body; 
+        const { email, noteId, noteTitle, category, sellFor, sellPrice, purchaseEmail, buyerEmail, approveFlag } = req.body;
         const newNote = await BuyerNotes.create({
             email,
             noteId,
@@ -98,18 +98,7 @@ async function postBuyerNote(req, res) {
             buyerEmail,
             approveFlag
         });
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            host: 'smtp.gmail.com',
-            port: 465,
-            secure: true,
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            }
-        });
-
-        // Email content
+    
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: buyerEmail,
@@ -171,9 +160,9 @@ async function updateBuyerNote(req, res) {
 }
 async function getDownloadNotesById(req, res) {
     const noteId = req.params.id; // Assuming the ID is passed in the request parameter 'id'
-  
+
     try {
-        const note = await DownloadNotes.findAll({ 
+        const note = await DownloadNotes.findAll({
             where: { noteId },
             attributes: {
                 include: [
@@ -200,21 +189,21 @@ async function getDownloadNotesById(req, res) {
                 ]
             }
         });
-  
-      if (!note) {
-        return res.status(404).json({ message: 'Note not found' });
-      }
-  
-      res.status(200).json(note);
+
+        if (!note) {
+            return res.status(404).json({ message: 'Note not found' });
+        }
+
+        res.status(200).json(note);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message });
     }
-  }
-  async function getAllDownloadNotesById(req, res) {
-  
+}
+async function getAllDownloadNotesById(req, res) {
+
     try {
-        const note = await DownloadNotes.findAll({ 
-            where: { },
+        const note = await DownloadNotes.findAll({
+            where: {},
             attributes: {
                 include: [
                     // Subquery for Buyer Full Name
@@ -240,16 +229,55 @@ async function getDownloadNotesById(req, res) {
                 ]
             }
         });
-  
-      if (!note) {
-        return res.status(404).json({ message: 'Note not found' });
-      }
-  
-      res.status(200).json(note);
+
+        if (!note) {
+            return res.status(404).json({ message: 'Note not found' });
+        }
+
+        res.status(200).json(note);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message });
     }
-  }
+}
+async function getDownloadNotesByEmail(req, res) {
+    const email = req.params.email;
+    try {
+        const note = await DownloadNotes.findAll({
+            where: { email },
+            attributes: {
+                include: [
+                    // Subquery for Buyer Full Name
+                    [
+                        Sequelize.literal(`(
+                            SELECT CONCAT(u."firstName", ' ', u."lastName")
+                            FROM "Users" AS u
+                            WHERE u."email" = "DownloadNotes"."buyerEmail"
+                            LIMIT 1
+                        )`),
+                        'buyerName'
+                    ],
+                    // Subquery for Purchaser Full Name
+                    [
+                        Sequelize.literal(`(
+                            SELECT CONCAT(u."firstName", ' ', u."lastName")
+                            FROM "Users" AS u
+                            WHERE u."email" = "DownloadNotes"."purchaseEmail"
+                            LIMIT 1
+                        )`),
+                        'purchaserName'
+                    ]
+                ]
+            }
+        });
 
+        if (!note) {
+            return res.status(404).json({ message: 'Note not found' });
+        }
 
-module.exports = { getDownloadNotes,  postDownloadNote, getSoldNotes, postSoldNote, getBuyerNotes, postBuyerNote,updateBuyerNote,getDownloadNotesById,getAllDownloadNotesById };
+        res.status(200).json(note);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+module.exports = { getDownloadNotes, postDownloadNote, getSoldNotes, postSoldNote, getBuyerNotes, postBuyerNote, updateBuyerNote, getDownloadNotesById, getAllDownloadNotesById, getDownloadNotesByEmail };

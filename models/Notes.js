@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../db');
-const User = require('./User'); 
+const User = require('./User');
 
 const Notes = sequelize.define('Notes', {
     email: {
@@ -20,7 +20,7 @@ const Notes = sequelize.define('Notes', {
         allowNull: false,
     },
     displayPicture: {
-        type: DataTypes.BLOB, 
+        type: DataTypes.BLOB,
     },
     notesAttachment: {
         type: DataTypes.BLOB,
@@ -64,7 +64,7 @@ const Notes = sequelize.define('Notes', {
         defaultValue: 0,
     },
     previewUpload: {
-        type: DataTypes.BLOB, 
+        type: DataTypes.BLOB,
     },
     statusFlag: {
         type: DataTypes.STRING(3),
@@ -73,18 +73,18 @@ const Notes = sequelize.define('Notes', {
         type: DataTypes.STRING(3),
     },
     displayPictureP: {
-        type: DataTypes.STRING(350), 
+        type: DataTypes.STRING(350),
         allowNull: true
     },
     notesAttachmentP: {
-        type: DataTypes.STRING(350), 
+        type: DataTypes.STRING(350),
         allowNull: true
     },
     previewUploadP: {
-        type: DataTypes.STRING(350), 
+        type: DataTypes.STRING(350),
         allowNull: true
     },
-    remark: {  
+    remark: {
         type: DataTypes.STRING(200),
         allowNull: true
     }

@@ -9,9 +9,9 @@ const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         // Set destination folder based on file type
         if (file.fieldname === 'displayPictureP') {
-            cb(null,  'uploads/images');
+            cb(null, 'uploads/images');
         } else {
-            cb(null,  'uploads/pdfs');
+            cb(null, 'uploads/pdfs');
         }
     },
     filename: function (req, file, cb) {
@@ -30,12 +30,13 @@ router.post('/upload', upload.fields([
 ]), async (req, res) => {
     try {
         // Create a new note instance with request body and file paths
+        console.log(req.body);
         const newNote = await Notes.create({
             email: req.body.email,
             noteTitle: req.body.noteTitle,
             category: req.body.category,
-            displayPictureP: req.files['displayPictureP'] ? "http://localhost:5000/uploads/images/"+req.files['displayPictureP'][0].originalname : null,
-            notesAttachmentP: req.files['notesAttachmentP'] ? "http://localhost:5000/uploads/pdfs/"+req.files['notesAttachmentP'][0].originalname : null,
+            displayPictureP: req.files['displayPictureP'] ? "http://localhost:5000/uploads/images/" + req.files['displayPictureP'][0].originalname : null,
+            notesAttachmentP: req.files['notesAttachmentP'] ? "http://localhost:5000/uploads/pdfs/" + req.files['notesAttachmentP'][0].originalname : null,
             notesType: req.body.notesType,
             numberOfPages: req.body.numberOfPages,
             notesDescription: req.body.notesDescription,
@@ -46,7 +47,7 @@ router.post('/upload', upload.fields([
             professorLecturer: req.body.professorLecturer,
             sellFor: req.body.sellFor,
             sellPrice: req.body.sellPrice,
-            previewUploadP: req.files['previewUploadP'] ? "http://localhost:5000/uploads/pdfs/"+req.files['previewUploadP'][0].originalname : null,
+            previewUploadP: req.files['previewUploadP'] ? "http://localhost:5000/uploads/pdfs/" + req.files['previewUploadP'][0].originalname : null,
             statusFlag: req.body.statusFlag,
             publishFlag: req.body.publishFlag
         });
@@ -82,11 +83,12 @@ router.put('/updateNotes/:id', upload.fields([
             sellPrice,
             statusFlag,
             publishFlag,
+            remark,
             displayPictureP,
             notesAttachmentP,
             previewUploadP
         } = req.body;
-        
+        console.log(req.body);
         // Find the note by ID
         const existingNote = await Notes.findOne({ where: { id: noteId } });
         if (!existingNote) {
@@ -98,7 +100,6 @@ router.put('/updateNotes/:id', upload.fields([
         existingNote.noteTitle = noteTitle;
         existingNote.category = category;
         existingNote.notesType = notesType;
-        existingNote.numberOfPages = numberOfPages;
         existingNote.notesDescription = notesDescription;
         existingNote.universityInformation = universityInformation;
         existingNote.country = country;
@@ -109,16 +110,29 @@ router.put('/updateNotes/:id', upload.fields([
         existingNote.sellPrice = sellPrice;
         existingNote.statusFlag = statusFlag;
         existingNote.publishFlag = publishFlag;
+        existingNote.remark = remark;
 
-        // Update file paths if files are provided in the request
-        if (req.files['displayPictureP']) {
+        let numberOfPagesToUpdate = req.body.numberOfPages;
+
+        if (numberOfPagesToUpdate === 'undefined' || numberOfPagesToUpdate === undefined) {
+            numberOfPagesToUpdate = existingNote.numberOfPages;
+        }
+        if (req.files && req.files['displayPictureP']) {
             existingNote.displayPictureP = "http://localhost:5000/uploads/images/" + req.files['displayPictureP'][0].originalname;
+        } else if (displayPictureP && displayPictureP !== 'undefined') {
+            existingNote.displayPictureP = displayPictureP;
         }
-        if (req.files['notesAttachmentP']) {
+
+        if (req.files && req.files['notesAttachmentP']) {
             existingNote.notesAttachmentP = "http://localhost:5000/uploads/pdfs/" + req.files['notesAttachmentP'][0].originalname;
+        } else if (notesAttachmentP && notesAttachmentP !== 'undefined') {
+            existingNote.notesAttachmentP = notesAttachmentP;
         }
-        if (req.files['previewUploadP']) {
+
+        if (req.files && req.files['previewUploadP']) {
             existingNote.previewUploadP = "http://localhost:5000/uploads/pdfs/" + req.files['previewUploadP'][0].originalname;
+        } else if (previewUploadP && previewUploadP !== 'undefined') {
+            existingNote.previewUploadP = previewUploadP;
         }
 
         // Save the updated note
