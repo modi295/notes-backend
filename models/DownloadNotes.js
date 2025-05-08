@@ -49,6 +49,26 @@ const DownloadNotes = sequelize.define('DownloadNotes', {
     PurchaseTypeFlag: {
         type: DataTypes.STRING(5),
     },
+    rating: {
+        type: DataTypes.STRING(1),
+        allowNull: true
+    },
+    comment: {
+        type: DataTypes.STRING(40),
+        allowNull: true
+    },
+    ReportRemark: {
+        type: DataTypes.STRING(60),
+        allowNull: true
+    },
+    addedBy: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    updatedBy: {
+        type: DataTypes.STRING,
+        allowNull: true
+    }
 }, {
     timestamps: true,
 });

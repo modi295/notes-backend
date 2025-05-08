@@ -18,6 +18,14 @@ const Contact = sequelize.define('Contact', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  addedBy: {
+      type: DataTypes.STRING,
+      allowNull: true
+  },
+  updatedBy: {
+      type: DataTypes.STRING,
+      allowNull: true
+  }
 },
   {
     timestamps: true,

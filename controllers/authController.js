@@ -3,6 +3,8 @@ const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const OTP = require('../models/Otp');
+
 const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage })
@@ -26,6 +28,9 @@ async function updateUser(req, res) {
     if (req.file) {
       updatedUserData.profilePicture = req.file.buffer;
     }
+    updatedUserData.updatedBy =  req.fullName;
+   // console.log(updatedUserData.updatedBy);
+
     const [updatedRowsCount, [updatedUser]] = await User.update(updatedUserData, {
       where: { email },
       returning: true
@@ -59,34 +64,21 @@ async function updateUser(req, res) {
   }
 }
 
-// async function register(req, res) {
-//   const { firstName, lastName, email, password } = req.body;
-//   try {
-//     const hashedPassword = await bcrypt.hash(password, 10);
-//     const user = await User.create({ firstName, lastName, email, password: hashedPassword });
-//     res.status(201).json({ userId: user.id });
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// }
-
-
-
 async function register(req, res) {
   const { firstName, lastName, email, password } = req.body;
   
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({ firstName, lastName, email, password: hashedPassword, active: 'N' });
+    const user = await User.create({ firstName, lastName, email, password: hashedPassword, active: 'N', addedBy:req.fullName });
 
     const token = jwt.sign({ userId: user.id }, "your-secret-key", { expiresIn: "24h" });
 
     // Send verification email
-    const verificationLink = `http://localhost:3000/verify-email/${token}`;
+    const verificationLink = `http://192.168.2.39:3000/verify-email/${token}`;
     
     const mailOptions = {
-      from: "chamanmodi911@gmail.com",
+      from: process.env.EMAIL_USER,
       to: email,
       subject: "Note Marketplace - Email Verification",
       html: `<p>Hello ${firstName},</p>
@@ -233,13 +225,93 @@ async function login(req, res) {
           return res.status(401).json({ error: 'Invalid password' });
       }
 
-      const token = jwt.sign({ userId: user.id }, 'your_secret_key', { expiresIn: '1m' });
+      const token = jwt.sign({ userId: user.id }, 'your_secret_key', { expiresIn: '1d' });
 
       res.json({ token,role: user.role });
   } catch (error) {
       res.status(500).json({ error: error.message });
   }
 }
+
+async function sendOtpForLogin(req, res) {
+  const { email } = req.body;
+
+  try {
+    // 1. Check if user exists
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.active === 'N') {
+      return res.status(403).json({ error: 'Your ID has been deactivated. Please contact Admin.' });
+    }
+
+    // 2. Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiredAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+
+    // 3. Store OTP in DB
+    await OTP.create({ email, otp, expiredAt});
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Your OTP for Login',
+      text: `Your OTP is: ${otp}. It will expire in 5 minutes.`,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.status(201).json({ Message: "Mail Sent" });
+  } catch (error) {
+    console.error('OTP Error:', error);
+    res.status(500).json({ error: 'Failed to send OTP' });
+  }
+}
+
+async function verifyOtpLogin(req, res) {
+  const { email, otp } = req.body;
+
+  try {
+    // 1. Find valid OTP
+    const otpRecord = await OTP.findOne({
+      where: {
+        email,
+        otp,
+        expiredAt: {
+          [Op.gt]: new Date() // Not expired
+        }
+      },
+      order: [['createdAt', 'DESC']]
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({ error: 'Invalid or expired OTP' });
+    }
+
+    // 2. Find user
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.active === 'N') {
+      return res.status(403).json({ error: 'Your ID has been deactivated. Please contact Admin.' });
+    }
+
+    // 3. Delete OTP after use (optional but secure)
+    await otpRecord.destroy();
+
+    // 4. Generate JWT
+    const token = jwt.sign({ userId: user.id }, 'your_secret_key', { expiresIn: '1d' });
+
+    res.status(200).json({ token, role: user.role });
+  } catch (error) {
+    console.error('OTP Verification Error:', error);
+    res.status(500).json({ error: 'Failed to verify OTP' });
+  }
+}
+
 async function forgotPassword(req, res) {
   const { email } = req.body;
   try {
@@ -254,12 +326,15 @@ async function forgotPassword(req, res) {
 
     await user.update({ password: hashedPassword });
 
-    await transporter.sendMail({
+    const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: user.email,
+      to: email,
       subject: 'New Temporary Password has been created for you',
       text: `Hello,\nWe have generated a new password for you.\nPassword: ${randomPassword}\nVisit us at: www.tatvasoft.com or E-mail us at: business@tatvasoft.com\nRegards,\nNotes Marketplace`,
-    });
+    
+    };
+
+    await transporter.sendMail(mailOptions);
     res.status(201).json({ Message: "Mail Sent" });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -376,12 +451,12 @@ async function Admin(req, res) {
   try {
     const password = email.split('@')[0]; 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ firstName, lastName, email, phoneNumberCode ,phoneNumber, password: hashedPassword, role:'Admin'});
+    const user = await User.create({ firstName, lastName, email, phoneNumberCode ,phoneNumber, password: hashedPassword, role:'Admin',addedBy : req.fullName});
     res.status(201).json({ userId: user.id });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 }
 
-module.exports = { register, login, forgotPassword, getUser, updateUser, uploadProfilePicture, changePassword, getAllUsers,Admin,verifyEmail };
+module.exports = { register, login, forgotPassword, getUser, updateUser, uploadProfilePicture, changePassword, getAllUsers,Admin,verifyEmail,sendOtpForLogin,verifyOtpLogin };
 

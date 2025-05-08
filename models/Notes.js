@@ -87,6 +87,14 @@ const Notes = sequelize.define('Notes', {
     remark: {
         type: DataTypes.STRING(200),
         allowNull: true
+    },
+    addedBy: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    updatedBy: {
+        type: DataTypes.STRING,
+        allowNull: true
     }
 }, {
     timestamps: true,

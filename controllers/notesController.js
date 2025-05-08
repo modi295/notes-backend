@@ -1,5 +1,6 @@
 const { Op, Sequelize } = require('sequelize');  // Add this line
 const Notes = require('../models/Notes');
+const User = require('../models/User');
 const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -125,11 +126,27 @@ async function getNotes(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
+
 async function getNotesById(req, res) {
-  const noteId = req.params.id; // Assuming the ID is passed in the request parameter 'id'
+  const noteId = req.params.id;
 
   try {
-    const note = await Notes.findByPk(noteId); // Find note by its ID (primary key)
+    const note = await Notes.findOne({
+      where: { id: noteId }, 
+      attributes: {
+        include: [
+          [
+            Sequelize.literal(`(
+              SELECT COUNT(DISTINCT dn."email")
+              FROM "DownloadNotes" AS dn
+              WHERE dn."noteId" = "Notes".id AND dn."ReportRemark" IS NOT NULL
+            )`),
+            'reportCount'
+          ]
+        ]
+      }
+    });
 
     if (!note) {
       return res.status(404).json({ message: 'Note not found' });
@@ -137,9 +154,12 @@ async function getNotesById(req, res) {
 
     res.status(200).json(note);
   } catch (error) {
+    console.error('Error fetching note by ID:', error);
     res.status(500).json({ error: error.message });
   }
 }
+
+
 
 // async function getNotesById(req, res) {
 //   const noteId = req.params.id; // Assuming the ID is passed in the request parameter 'id'
@@ -200,6 +220,44 @@ async function getPublishNotesByEmail(req, res) {
       where: {
         email,
         publishFlag: 'P'
+      },
+      attributes: {
+        include: [
+          [
+            // Subquery to count downloads for each noteId
+            Sequelize.literal(`(
+                SELECT COUNT(*) 
+                FROM "DownloadNotes" AS dn 
+                WHERE dn."noteId" = "Notes".id
+              )`),
+            'downloadCount'
+          ],
+          [
+            Sequelize.literal(`(
+                SELECT CONCAT(u."firstName", ' ', u."lastName")
+                FROM "Users" AS u
+                WHERE u.email = "Notes".email
+                LIMIT 1
+              )`),
+            'userFullName'
+          ],
+          [
+            Sequelize.literal(`(
+                SELECT ROUND(AVG(CAST(dn."rating" AS FLOAT)))
+                FROM "DownloadNotes" AS dn
+                WHERE dn."noteId" = "Notes".id
+            )`),
+            'averageRating'
+          ],
+          [
+            Sequelize.literal(`(
+              SELECT COUNT(DISTINCT dn."email")
+              FROM "DownloadNotes" AS dn
+              WHERE dn."noteId" = "Notes".id AND dn."ReportRemark" IS NOT NULL
+            )`),
+            'reportCount'
+          ]
+        ]
       }
     });
 
@@ -237,6 +295,22 @@ async function getAllPublishedNotes(req, res) {
                 LIMIT 1
               )`),
             'userFullName'
+          ],
+          [
+            Sequelize.literal(`(
+                SELECT ROUND(AVG(CAST(dn."rating" AS FLOAT)))
+                FROM "DownloadNotes" AS dn
+                WHERE dn."noteId" = "Notes".id
+            )`),
+            'averageRating'
+          ],
+          [
+            Sequelize.literal(`(
+              SELECT COUNT(DISTINCT dn."email")
+              FROM "DownloadNotes" AS dn
+              WHERE dn."noteId" = "Notes".id AND dn."ReportRemark" IS NOT NULL
+            )`),
+            'reportCount'
           ]
         ]
       }
@@ -339,11 +413,23 @@ async function updateNotes(req, res) {
     existingNote.displayPictureP = displayPictureP || existingNote.displayPictureP;
     existingNote.notesAttachmentP = notesAttachmentP || existingNote.notesAttachmentP;
     existingNote.previewUploadP = previewUploadP || existingNote.previewUploadP;
+    existingNote.updatedBy=req.fullName;
 
     // Save the updated note
     const updatedNote = await existingNote.save();
 
-    // Send a success response with the updated note
+    const seller = await User.findOne({ where: { email: email } });
+    const sellerName = seller && seller.firstName && seller.lastName ? `${seller.firstName} ${seller.lastName}` : 'Seller';
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Sorry! We need to remove your notes from our portal.",
+      text: `Hello "${sellerName},\n\nWe want to inform you that your note "${noteTitle}" has been removed from the portal.\nPlease find our remarks below:\n\n${remark}\n\nRegards,\nNotes Marketplace`
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log("Email sent successfully.");
     res.status(200).json({ success: true, data: updatedNote });
   } catch (error) {
     // Send an error response if something goes wrong
@@ -500,7 +586,46 @@ async function getUserNotesByEmail(req, res) {
   }
 }
 
+async function getAllRejectedNotesByEmail(req, res) {
+  try {
+    const email = req.params.email;
+    const allPublishedNotes = await Notes.findAll({
+      where: { email: email, publishFlag: 'R' },
+      attributes: {
+        include: [
+          [
+            // Subquery to count downloads for each noteId
+            Sequelize.literal(`(
+              SELECT COUNT(*) 
+              FROM "DownloadNotes" AS dn 
+              WHERE dn."noteId" = "Notes".id
+            )`),
+            'downloadCount'
+          ],
+          [
+            Sequelize.literal(`(
+              SELECT CONCAT(u."firstName", ' ', u."lastName")
+              FROM "Users" AS u
+              WHERE u.email = "Notes".email
+              LIMIT 1
+            )`),
+            'userFullName'
+          ]
+        ]
+      }
+    });
 
-module.exports = { getAllPublishedNotes, uploadNotes, uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload, getNotes, getPublishNotesByEmail, getSaveNotes, getAllNotes, getNotesById, deleteNoteById, updateNotes, getUnderReviewNotes, getAllRejectedNotes, getUnderReviewNotesByEmail, getUserNotesByEmail };
+    if (!allPublishedNotes || allPublishedNotes.length === 0) {
+      return res.status(404).json({ message: 'No published notes found' });
+    }
+
+    res.status(200).json(allPublishedNotes);
+  } catch (error) {
+    console.error('Error fetching published notes:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+module.exports = { getAllPublishedNotes, uploadNotes, uploadDisplayPicture, uploadNotesAttachment, uploadPreviewUpload, getNotes, getPublishNotesByEmail, getSaveNotes, getAllNotes, getNotesById, deleteNoteById, updateNotes, getUnderReviewNotes, getAllRejectedNotes, getUnderReviewNotesByEmail, getUserNotesByEmail, getAllRejectedNotesByEmail };
 
 

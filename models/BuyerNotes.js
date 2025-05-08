@@ -49,6 +49,14 @@ const BuyerNotes = sequelize.define('BuyerNotes', {
     approveFlag: {
         type: DataTypes.STRING(1),
         allowNull: true,
+    },
+    addedBy: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    updatedBy: {
+        type: DataTypes.STRING,
+        allowNull: true
     }
 }, {
     timestamps: true,

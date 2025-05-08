@@ -4,7 +4,7 @@ async function createLookup(req, res) {
   const { typeId, typeCode, typeName } = req.body;
 
   try {
-    const lookup = await Lookup.create({ typeId, typeCode, typeName });
+    const lookup = await Lookup.create({ typeId, typeCode, typeName, addedBy:req.fullName });
     res.status(201).json({ message: "Lookup created successfully", lookup });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -44,7 +44,7 @@ async function updateLookup(req, res) {
       return res.status(404).json({ message: "Lookup not found" });
     }
 
-    await lookup.update({ typeCode, typeName });
+    await lookup.update({ typeCode, typeName, updatedBy : req.fullName });
     res.status(200).json({ message: "Lookup updated successfully", lookup });
   } catch (error) {
     res.status(500).json({ error: error.message });

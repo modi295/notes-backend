@@ -15,6 +15,14 @@ const Lookup = sequelize.define('Lookup', {
     type: DataTypes.STRING(40),
     allowNull: true,
   },
+    addedBy: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    updatedBy: {
+        type: DataTypes.STRING,
+        allowNull: true
+    }
 }, 
 {
   timestamps: true,

@@ -45,6 +45,14 @@ const SoldNotes = sequelize.define('SoldNotes', {
         type: DataTypes.FLOAT,
         allowNull: false,
         defaultValue: 0,
+    },
+    addedBy: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    updatedBy: {
+        type: DataTypes.STRING,
+        allowNull: true
     }
 }, {
     timestamps: true,
